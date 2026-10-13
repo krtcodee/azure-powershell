@@ -1,6 +1,6 @@
 ---
 Module Name: Az.Resiliency
-Module Guid: 55b74ab3-2c97-4bbf-8bd8-9fea31707a36
+Module Guid: cafe1a49-aabe-4f48-9c43-680b3bb66ce3
 Download Help Link: https://learn.microsoft.com/powershell/module/az.resiliency
 Help Version: 1.0.0.0
 Locale: en-US
@@ -191,7 +191,7 @@ This action checks if the recovery orchestration plan is eligible for test failo
 Update a Drill
 
 ### [Update-AzResiliencyDrillResource](Update-AzResiliencyDrillResource.md)
-This enables the user to include, exclude or update resources from their Drill.
+This enables the user to include, exclude or add resources from their Drill.
 
 ### [Update-AzResiliencyEnrollment](Update-AzResiliencyEnrollment.md)
 Update an Enrollment.
