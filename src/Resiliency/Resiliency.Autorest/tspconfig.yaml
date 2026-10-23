@@ -1,0 +1,378 @@
+options:
+  "@azure-tools/typespec-powershell":
+    service-dir: "src"
+    emitter-output-dir: "{output-dir}/{service-dir}/Resiliency/Resiliency.Autorest"
+    clear-output-folder: true
+    azure: true
+    api-version: "2026-10-01"
+    module-version: 0.1.0
+    prefix: "Az"
+    subject-prefix: "Resiliency"
+    service-name: Resiliency
+    module-name: "{prefix}.{service-name}"
+    output-folder: "{output-dir}"
+    exclude-tableview-properties:
+      - Id
+      - Type
+    directive:
+      - where:
+          parameter-name: SubscriptionId
+        set:
+          default:
+            script: "(Get-AzContext).Subscription.Id"
+      # REQUIRED TO COMPILE - not a style choice. autorest.powershell 4.0.758 mis-generates
+      # the discriminated DrillProperties subtypes from the flattened errorDetails property,
+      # emitting colliding ErrorDetail / ErrorDetails members on RegionalDrillProperties and
+      # ZonalDrillProperties that fail to satisfy IDrillProperties (CS0738/CS0535/CS9333/CS0539).
+      # The property is readOnly; failure detail still surfaces via the operation error response.
+      # swagger-document directives are not applied by the TypeSpec emitter, so rename the
+      # mangled members on the subtypes back to what the base interfaces expect.
+      - where:
+          model-name: ^(Regional|Zonal)DrillProperties$
+          property-name: ^ErrorDetail$
+        set:
+          property-name: ErrorDetailDetails
+      - where:
+          model-name: ^(Regional|Zonal)DrillProperties$
+          property-name: ^ErrorDetails$
+        set:
+          property-name: ErrorDetail
+
+      # The six RecoveryPlanActions_ValidateFor* operations collapse into numbered
+      # Test-AzResiliencyRecoveryPlanAction variants; split them back per operation.
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(|ViaIdentity|ViaIdentityServiceGroup)2$
+        set:
+          subject: RecoveryPlanFailoverCommitValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(|ViaIdentity|ViaIdentityServiceGroup)4$
+        set:
+          subject: RecoveryPlanTestFailoverCleanupValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(|ViaIdentity|ViaIdentityServiceGroup)3$
+        set:
+          subject: RecoveryPlanTestFailoverValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(Expanded|ViaIdentityExpanded|ViaIdentityServiceGroupExpanded|ViaJsonFilePath|ViaJsonString)2$
+        set:
+          subject: RecoveryPlanTestFailoverValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(|ViaIdentity|ViaIdentityServiceGroup)5$
+        set:
+          subject: RecoveryPlanReprotectValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(Expanded|ViaIdentityExpanded|ViaIdentityServiceGroupExpanded|ViaJsonFilePath|ViaJsonString)3$
+        set:
+          subject: RecoveryPlanReprotectValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(\D*)1$
+        set:
+          subject: RecoveryPlanFailoverValidation
+          variant: Test$1
+      - where:
+          verb: Test
+          subject: RecoveryPlanAction
+          variant: ^Validate(\D*)$
+        set:
+          subject: RecoveryPlanOperationValidation
+          variant: Test$1
+
+      # The old README renamed operationIds (swagger-document) to get stable cmdlet names and
+      # variant names. The TypeSpec emitter ignores those, so restore verb/subject/variant here.
+      - where:
+          verb: ^Invoke$
+          subject: ^MarkDrillRunAsComplete$
+          variant: '^Mark(?<rest>.*)$'
+        set:
+          verb: Complete
+          subject: DrillRun
+          variant: 'Complete$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^RecommendGoalAssignmentCapacity$
+          variant: '^Recommend(?<rest>.*)$'
+        set:
+          verb: Get
+          subject: GoalAssignmentCapacity
+          variant: 'Get$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^FailDrillRunOver$
+          variant: '^Fail(?<rest>.*)$'
+        set:
+          subject: DrillRunFailover
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^ReprotectDrillRun$
+          variant: '^Reprotect(?<rest>.*)$'
+        set:
+          subject: DrillRunReprotect
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Set$
+          subject: ^RecoveryPlanAction$
+          variant: '^Failover(?<rest>.*)$'
+        set:
+          verb: Invoke
+          subject: RecoveryPlanFailover
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^CommitRecoveryPlanActionFailover$
+          variant: '^Commit(?<rest>.*)$'
+        set:
+          subject: RecoveryPlanFailoverCommit
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^FinalizeRecoveryPlanAction$
+          variant: '^Finalize(?<rest>.*)$'
+        set:
+          subject: RecoveryPlanFinalize
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Invoke$
+          subject: ^ReprotectRecoveryPlanAction$
+          variant: '^Reprotect(?<rest>.*)$'
+        set:
+          subject: RecoveryPlanReprotect
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Test$
+          subject: ^RecoveryPlanActionFailover$
+          variant: '^Test(?<rest>.*)$'
+        set:
+          verb: Invoke
+          subject: RecoveryPlanTestFailover
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Test$
+          subject: ^RecoveryPlanActionFailoverCleanup$
+          variant: '^Test(?<rest>.*)$'
+        set:
+          verb: Invoke
+          subject: RecoveryPlanTestFailoverCleanup
+          variant: 'Invoke$<rest>'
+      - where:
+          verb: ^Test$
+          subject: ^RecoveryPlanActionReadiness$
+          variant: '^Check(?<rest>.*)$'
+        set:
+          subject: RecoveryPlanReadiness
+          variant: 'Test$<rest>'
+      - where:
+          verb: ^Update$
+          subject: ^RecoveryPlanActionResource$
+        set:
+          subject: RecoveryPlanResource
+      - where:
+          verb: ^Test$
+          subject: ^Drill$
+          variant: '^Validate(?<rest>.*)$'
+        set:
+          subject: DrillExecutionValidation
+          variant: 'Test$<rest>'
+      # Old module: -DrillName with no alias (the emitter generates -Name with alias DrillName).
+      - where:
+          verb: Test
+          subject: DrillExecutionValidation
+          parameter-name: Name
+        set:
+          parameter-name: DrillName
+        clear-alias: true
+      # Old module: -Name with alias DrillRunName.
+      - where:
+          verb: Complete
+          subject: DrillRun
+          parameter-name: DrillRunName
+        set:
+          parameter-name: Name
+          alias: DrillRunName
+      - where:
+          verb: ^Test$
+          subject: ^DrillResyncReadiness$
+          variant: '^Check(?<rest>.*)$'
+        set:
+          verb: Sync
+          subject: DrillReadiness
+          variant: 'Sync$<rest>'
+      - where:
+          verb: ^New$
+          subject: ^DrillRunReport$
+          variant: '^Generate(?<rest>.*)$'
+        set:
+          variant: 'New$<rest>'
+      - where:
+          verb: ^Stop$
+          subject: ^Drill$
+          variant: '^End(?<rest>.*)$'
+        set:
+          variant: 'Stop$<rest>'
+      - where:
+          verb: ^Get$
+          subject: ^DrillRunReportDownloadUrl$
+          variant: '^List(?<rest>.*)$'
+        set:
+          variant: 'Get$<rest>'
+      - where:
+          verb: ^Update$
+          subject: ^GoalAssignmentGoalResource$
+          variant: '^Refresh(?<rest>.*)$'
+        set:
+          verb: Sync
+          subject: GoalResource
+          variant: 'Sync$<rest>'
+      - where:
+          verb: ^Update$
+          subject: ^GoalAssignmentGoalResource$
+        set:
+          subject: GoalResource
+      # AddOrUpdateResources was a single Update-AzResiliencyDrillResource; the emitter also emits Add-.
+      - where:
+          verb: ^Add$
+          subject: ^DrillResource$
+        remove: true
+      # Operations_List is added by the TypeSpec ARM library; the swagger-based module had none.
+      - where:
+          verb: ^Get$
+          subject: ^Operation$
+        remove: true
+
+      # A `_Invoke` operation maps to verb Invoke but autorest also leaves Invoke on the
+      # subject, yielding Invoke-AzResiliencyInvokeRecoveryPlanFailover. Strip the duplicate.
+      - where:
+          subject: ^Invoke(?<name>.*)$
+        set:
+          subject: $<name>
+
+      # RecoveryJobs_Retry has no approved-verb mapping, so autorest falls back to
+      # Invoke with `Retry` absorbed into the subject. Reorder for consistency with
+      # the other Invoke-AzResiliency<Resource><Action> cmdlets.
+      - where:
+          subject: ^RetryRecoveryJob$
+        set:
+          subject: RecoveryJobRetry
+
+      # UsagePlans has both a by-subscription and a by-resource-group list. AutoRest
+      # strips the trailing PascalCase words when deriving the variant name, so both
+      # collapse to `_List` and the second is forced to an opaque `_List1`. The emitter orders them the
+      # other way round, so swap by renaming List -> ListByResourceGroup first, then List1 -> List.
+      - where:
+          verb: Get
+          subject: UsagePlan
+          variant: List
+        set:
+          variant: ListByResourceGroup
+      - where:
+          verb: Get
+          subject: UsagePlan
+          variant: List1
+        set:
+          variant: List
+      # The JsonString/JsonFilePath descriptions embed the operation's original variant name (e.g. "Validate"),
+      # so after renaming they are restored to the old module's wording. These must stay after all renames above.
+      - where:
+          verb: ^Complete$
+          subject: ^DrillRun$
+          parameter-name: ^JsonString$
+        set:
+          parameter-description: Json string supplied to the Complete operation
+      - where:
+          verb: ^Complete$
+          subject: ^DrillRun$
+          parameter-name: ^JsonFilePath$
+        set:
+          parameter-description: Path of Json file supplied to the Complete operation
+      - where:
+          verb: ^Get$
+          subject: ^(DrillRunReportDownloadUrl|GoalAssignmentCapacity)$
+          parameter-name: ^JsonString$
+        set:
+          parameter-description: Json string supplied to the Get operation
+      - where:
+          verb: ^Get$
+          subject: ^(DrillRunReportDownloadUrl|GoalAssignmentCapacity)$
+          parameter-name: ^JsonFilePath$
+        set:
+          parameter-description: Path of Json file supplied to the Get operation
+      - where:
+          verb: ^Invoke$
+          subject: ^(DrillRunFailover|DrillRunReprotect|RecoveryPlanFailover|RecoveryPlanReprotect|RecoveryPlanTestFailover|RecoveryPlanTestFailoverCleanup)$
+          parameter-name: ^JsonString$
+        set:
+          parameter-description: Json string supplied to the Invoke operation
+      - where:
+          verb: ^Invoke$
+          subject: ^(DrillRunFailover|DrillRunReprotect|RecoveryPlanFailover|RecoveryPlanReprotect|RecoveryPlanTestFailover|RecoveryPlanTestFailoverCleanup)$
+          parameter-name: ^JsonFilePath$
+        set:
+          parameter-description: Path of Json file supplied to the Invoke operation
+      - where:
+          verb: ^Stop$
+          subject: ^Drill$
+          parameter-name: ^JsonString$
+        set:
+          parameter-description: Json string supplied to the Stop operation
+      - where:
+          verb: ^Stop$
+          subject: ^Drill$
+          parameter-name: ^JsonFilePath$
+        set:
+          parameter-description: Path of Json file supplied to the Stop operation
+      - where:
+          verb: ^Test$
+          subject: ^(DrillExecutionValidation|RecoveryPlanFailoverValidation|RecoveryPlanOperationValidation|RecoveryPlanReprotectValidation|RecoveryPlanTestFailoverValidation)$
+          parameter-name: ^JsonString$
+        set:
+          parameter-description: Json string supplied to the Test operation
+      - where:
+          verb: ^Test$
+          subject: ^(DrillExecutionValidation|RecoveryPlanFailoverValidation|RecoveryPlanOperationValidation|RecoveryPlanReprotectValidation|RecoveryPlanTestFailoverValidation)$
+          parameter-name: ^JsonFilePath$
+        set:
+          parameter-description: Path of Json file supplied to the Test operation
+      # The emitter cannot type the self-referencing array JobTaskDetail.subTasksList
+      # (JobTaskDetail[]) and emits an `undefined` model. Rewrite it as List<IJobTaskDetail>,
+      # mirroring the generated userComments array, and empty the bogus subTasksList model.
+      # Braces are written as \x7B/\x7D because the TypeSpec configuration loader interpolates them.
+      - from: source-file-csharp
+        transform: |
+          const path = $documentPath.replace(/\\/g, "/");
+          const ns = "Microsoft.Azure.PowerShell.Cmdlets.Resiliency.Models.";
+          const list = "System.Collections.Generic.List<" + ns + "IJobTaskDetail>";
+          if (/\/Models\/subTasksList(\.\w+)?\.cs$/.test(path))
+            return "";
+          if (path.endsWith("/Models/JobTaskDetail.cs"))
+            return $.split("typeof(" + ns + "IsubTasksList)").join("typeof(" + ns + "IJobTaskDetail)")
+              .split(ns + "IsubTasksList").join(list)
+              .split("(this._subTasksList = this._subTasksList ?? new undefined())").join("this._subTasksList");
+          if (path.endsWith("/Models/JobTaskDetail.json.cs"))
+            return $.replace(/\x7B_subTasksList = If\(.*\r?\n/, "_subTasksList = If( json?.PropertyT<Microsoft.Azure.PowerShell.Cmdlets.Resiliency.Runtime.Json.JsonArray>(\"subTasksList\"), out var __jsonSubTasksList) ? If( __jsonSubTasksList as Microsoft.Azure.PowerShell.Cmdlets.Resiliency.Runtime.Json.JsonArray, out var __st) ? new global::System.Func<" + list + ">(()=> global::System.Linq.Enumerable.ToList(global::System.Linq.Enumerable.Select(__st, (__p)=>(" + ns + "IJobTaskDetail) (" + ns + "JobTaskDetail.FromJson(__p) )) ))() : null : _subTasksList;\n")
+              .replace(/AddIf\( null != this\._subTasksList .*\r?\n/, "if (null != this._subTasksList) \x7B var __sr = new Microsoft.Azure.PowerShell.Cmdlets.Resiliency.Runtime.Json.XNodeArray(); foreach (var __s in this._subTasksList) AddIf(__s?.ToJson(null, serializationMode), __sr.Add); container.Add(\"subTasksList\", __sr); \x7D\n");
+          if (path.endsWith("/Models/JobTaskDetail.PowerShell.cs"))
+            return $.split("(undefined.undefined)").join("(" + list + ")")
+              .split("undefinedTypeConverter.ConvertFrom").join("__y => TypeConverterExtensions.SelectToList<" + ns + "IJobTaskDetail>(__y, " + ns + "JobTaskDetailTypeConverter.ConvertFrom)");
+linter:
+  extends:
+    - "@azure-tools/typespec-azure-rulesets/resource-manager"

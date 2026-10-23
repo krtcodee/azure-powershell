@@ -8,7 +8,7 @@ schema: 2.0.0
 # Update-AzResiliencyDrillResource
 
 ## SYNOPSIS
-This enables the user to include, exclude or update resources from their Drill.
+This enables the user to include, exclude or add resources from their Drill.
 
 ## SYNTAX
 
@@ -75,7 +75,7 @@ Update-AzResiliencyDrillResource -DrillName <String> -ServiceGroupName <String> 
 ```
 
 ## DESCRIPTION
-This enables the user to include, exclude or update resources from their Drill.
+This enables the user to include, exclude or add resources from their Drill.
 
 ## EXAMPLES
 
