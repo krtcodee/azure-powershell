@@ -15,19 +15,36 @@ if(($null -eq $TestName) -or ($TestName -contains 'Get-AzResiliencyUnifiedResili
 }
 
 Describe 'Get-AzResiliencyUnifiedResilienceItem' {
+    BeforeAll {
+        $serviceGroupIdentity = @{ ServiceGroupName = $env.serviceGroupName }
+        function Assert-UnifiedResilienceItem([object]$Item) {
+            $Item.Name | Should -Be $env.unifiedResilienceItemName
+            $Item.Id | Should -Match "/serviceGroups/$($env.serviceGroupName)/"
+        }
+    }
+
+    # Skipped: unifiedResilienceItems GET returns 401 'The AAD authentication failed - unauthorized' from the RP for the test identity (correlation 70b8ebe9-ad22-49ac-a370-e8995e160038).
     It 'List' -skip {
-        { throw [System.NotImplementedException] } | Should -Not -Throw
+        $items = @(Invoke-ResiliencyWithRetry { Get-AzResiliencyUnifiedResilienceItem -ServiceGroupName $env.serviceGroupName })
+        $items.Name | Should -Contain $env.unifiedResilienceItemName
     }
 
+    # Skipped: unifiedResilienceItems GET returns 401 'The AAD authentication failed - unauthorized' from the RP for the test identity (correlation 70b8ebe9-ad22-49ac-a370-e8995e160038).
     It 'GetViaIdentityServiceGroup' -skip {
-        { throw [System.NotImplementedException] } | Should -Not -Throw
+        $item = Invoke-ResiliencyWithRetry { Get-AzResiliencyUnifiedResilienceItem -ServiceGroupInputObject $serviceGroupIdentity -Name $env.unifiedResilienceItemName }
+        Assert-UnifiedResilienceItem $item
     }
 
+    # Skipped: unifiedResilienceItems GET returns 401 'The AAD authentication failed - unauthorized' from the RP for the test identity (correlation 70b8ebe9-ad22-49ac-a370-e8995e160038).
     It 'Get' -skip {
-        { throw [System.NotImplementedException] } | Should -Not -Throw
+        $item = Invoke-ResiliencyWithRetry { Get-AzResiliencyUnifiedResilienceItem -ServiceGroupName $env.serviceGroupName -Name $env.unifiedResilienceItemName }
+        Assert-UnifiedResilienceItem $item
     }
 
+    # Skipped: unifiedResilienceItems GET returns 401 'The AAD authentication failed - unauthorized' from the RP for the test identity (correlation 70b8ebe9-ad22-49ac-a370-e8995e160038).
     It 'GetViaIdentity' -skip {
-        { throw [System.NotImplementedException] } | Should -Not -Throw
+        $identity = $serviceGroupIdentity + @{ UnifiedResilienceItemName = $env.unifiedResilienceItemName }
+        $item = Invoke-ResiliencyWithRetry { Get-AzResiliencyUnifiedResilienceItem -InputObject $identity }
+        Assert-UnifiedResilienceItem $item
     }
 }
