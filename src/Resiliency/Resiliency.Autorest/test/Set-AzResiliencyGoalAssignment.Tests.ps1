@@ -15,18 +15,22 @@ if(($null -eq $TestName) -or ($TestName -contains 'Set-AzResiliencyGoalAssignmen
 }
 
 Describe 'Set-AzResiliencyGoalAssignment' {
+    # Service allows one goal assignment per service group and treats PUT as create; update must use PATCH (Update-AzResiliencyGoalAssignment).
     It 'UpdateExpanded' -skip {
         { throw [System.NotImplementedException] } | Should -Not -Throw
     }
 
+    # Service allows one goal assignment per service group and treats PUT as create; update must use PATCH (Update-AzResiliencyGoalAssignment).
     It 'Update' -skip {
         { throw [System.NotImplementedException] } | Should -Not -Throw
     }
 
+    # Service allows one goal assignment per service group and treats PUT as create; update must use PATCH (Update-AzResiliencyGoalAssignment).
     It 'UpdateViaJsonFilePath' -skip {
         { throw [System.NotImplementedException] } | Should -Not -Throw
     }
 
+    # Service allows one goal assignment per service group and treats PUT as create; update must use PATCH (Update-AzResiliencyGoalAssignment).
     It 'UpdateViaJsonString' -skip {
         { throw [System.NotImplementedException] } | Should -Not -Throw
     }
