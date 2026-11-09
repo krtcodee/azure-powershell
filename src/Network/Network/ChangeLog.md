@@ -19,9 +19,27 @@
 --->
 
 ## Upcoming Release
-* Added support for the `CAPTCHA` action in Application Gateway WAF (Web Application Firewall) policies.
-    - Added `CAPTCHA` as an allowed value for the `-Action` parameter of custom rules (`New-AzApplicationGatewayFirewallCustomRule`) and managed rule overrides (`New-AzApplicationGatewayFirewallPolicyManagedRuleOverride`).
-    - Added the `-CaptchaExpirationInMins` parameter to `New-AzApplicationGatewayFirewallPolicySetting`.
+
+## Version 8.4.0
+* Updated replication vault Private Link to API 2026-05-01 and Network SDK to 2026-03-01/2026-01-01.
+* Added `CapacityProviderId` to `New-AzVirtualNetworkAppliance` and `Update-AzVirtualNetworkAppliance`.
+* Added ExpressRoute link aggregation group (LAG) authorization/key cmdlets.
+* Added managed Network Virtual Appliance IPv6/dual-stack via `AddressFamily` (IPv4 default on creation; unchanged if omitted on update). Added read-only family, IPv6 prefix/private address output and interface public/private IPv6 addresses.
+* Added DDoS (Distributed Denial of Service) custom policy TCP/UDP mitigation rule management, IP prefix/geographic Deny/Permit matches and policy integration [Azure/azure-rest-api-specs#46716](https://github.com/Azure/azure-rest-api-specs/pull/46716).
+* Added `New-AzVirtualNetworkApplianceCapability`, `Get-AzVirtualNetworkApplianceCapability` and `Remove-AzVirtualNetworkApplianceCapability`.
+* Added `Get-AzDdosCustomPolicyDetectionRule` and `Set-AzDdosCustomPolicyDetectionRule` for API 2025-07-01 [#29387].
+* Expanded Change Safety support and fixed parameter forwarding.
+* Added provider-led ExpressRoute cross-connection migration and circuits on `ExpressRouteLag`.
+* Added First Party Service Tag associations to `New-AzPublicIpPrefix`.
+* Added `MigrateGatewayForPointToSiteProfile`; fixed `New-AzVirtualNetworkGatewayMigrationParameter -MigrationType`.
+* Added Application Gateway advanced routing/rule type `AdvancedRouting`.
+* Added mutual TLS (Transport Layer Security) `VerifyClientAuthMode` to `New-AzApplicationGatewayClientAuthConfiguration` and `Set-AzApplicationGatewayClientAuthConfiguration`.
+* Fixed `New-AzVirtualHubVnetConnection -EnableOnlyIpv6Peering` boolean conversion.
+* Added IPAM (IP Address Management) pool size bounds to creation/updates/output.
+* Added `Get-AzExpressRouteCircuitAuthorizationKey` and `Get-AzExpressRoutePortAuthorizationKey`.
+* Added Application Gateway WAF (Web Application Firewall) rule set display name/paranoia level output and CAPTCHA.
+* Added `SourceGeoLocation` and `DestinationGeoLocation` to `New-AzFirewallPolicyNetworkRule`.
+* Removed `FormatVersion` validation from `New-AzNetworkWatcherFlowLog` and `Set-AzNetworkWatcherFlowLog`.
 
 ## Version 8.2.0
 * Added `Get-AzExpressRouteLag`, `New-AzExpressRouteLag`, `Set-AzExpressRouteLag`, `Remove-AzExpressRouteLag`, `New-AzExpressRouteLagLOA`, `Get-AzExpressRouteLagLink`, and `Get-AzExpressRouteLagMember` for `ExpressRouteLag` resources (Microsoft.Network 2025-09-01 API).

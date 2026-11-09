@@ -14,6 +14,7 @@ autorest --use:@autorest/powershell@4.x
 isSdkGenerator: true
 powershell: true
 override-client-name: RecoveryServicesBackupClient
+title: RecoveryServicesBackupClient
 clear-output-folder: true
 reflect-api-versions: true
 openapi-type: arm
@@ -24,10 +25,10 @@ payload-flattening-threshold: 2
 
 ###
 ``` yaml
-# Lock to the merged Swagger PR commit so SDK generation remains reproducible.
-commit: 53fc184a55bd2214e3bec2f1d9098501072e7d1e
+# Spec source: merged Azure/azure-rest-api-specs PR #47153 (RecoveryServicesBackup 2026-10-01 API version, SQL Instance snapshot backup/restore), merged 2026-10-14.
+commit: 6f8edbbe9c190be0e4d61c0018503a406dccbd11
 input-file:
-  - https://github.com/Azure/azure-rest-api-specs/blob/$(commit)/specification/recoveryservicesbackup/resource-manager/Microsoft.RecoveryServices/RecoveryServicesBackup/stable/2026-07-01/bms.json
+  - https://github.com/Azure/azure-rest-api-specs/blob/$(commit)/specification/recoveryservicesbackup/resource-manager/Microsoft.RecoveryServices/RecoveryServicesBackup/stable/2026-10-01/bms.json
 
 directive:
   # Normalize multiline descriptions so generated C# documentation remains well-formed.
@@ -51,6 +52,9 @@ directive:
     transform: $ = $.replace(/xcludedRpList/g, 'xcludedRPList')
 
 output-folder: Generated
+
+# bms.json info.title is "Recovery Services Backup Client" (spaces = invalid C# class name); override to the legacy no-space client name.
+title: RecoveryServicesBackupClient
 
 namespace: Microsoft.Azure.Management.RecoveryServices.Backup
 ```

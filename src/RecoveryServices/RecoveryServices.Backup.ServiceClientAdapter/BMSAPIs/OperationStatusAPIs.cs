@@ -1,4 +1,4 @@
-﻿// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 //
 // Copyright Microsoft Corporation
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,24 @@ namespace Microsoft.Azure.Commands.RecoveryServices.Backup.Cmdlets.ServiceClient
                 vaultName ?? BmsAdapter.GetResourceName(),
                 resourceGroupName ?? BmsAdapter.GetResourceGroupName(),
                 operationId).Result;
+        }
+
+        public RestAzureNS.AzureOperationResponse<ServiceClientModel.OperationStatus>
+            GetScopedProtectedItemOperationStatus(
+                string containerName,
+                string protectedItemName,
+                string operationId,
+                string vaultName = null,
+                string resourceGroupName = null)
+        {
+            return BmsAdapter.Client.ProtectedItemOperationStatuses.GetWithHttpMessagesAsync(
+                resourceGroupName ?? BmsAdapter.GetResourceGroupName(),
+                vaultName ?? BmsAdapter.GetResourceName(),
+                AzureFabricName,
+                containerName,
+                protectedItemName,
+                operationId,
+                cancellationToken: BmsAdapter.CmdletCancellationToken).Result;
         }
 
         /// <summary>

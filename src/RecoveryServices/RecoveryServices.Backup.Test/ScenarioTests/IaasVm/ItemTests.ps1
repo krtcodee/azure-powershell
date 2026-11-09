@@ -182,16 +182,18 @@ function Test-AzureVMSourceScan
 	$vault = Get-AzRecoveryServicesVault -Name $vaultName -ResourceGroupName $resourceGroupName
 
 	Assert-True { $vault.Properties.SourceScanConfiguration.State -eq "Enabled" }
+	Start-TestSleep -Seconds 10
+
+	$item = Get-AzRecoveryServicesBackupItem -VaultId $vault.ID -BackupManagementType AzureVM -WorkloadType AzureVM
+	$targetItem = $item | Where-Object { $_.Name -eq $targetItem.Name } | Select-Object -First 1
+	Assert-NotNull $targetItem
 
 	# If source scan is already configured on the selected item, disable first so the test can
 	# validate both disable and enable transitions deterministically.
 	if ($targetItem.SourceSideScanStatus -eq "Configured")
 	{
-		$job = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Disabled -VaultId $vault.ID -Force
-		if ($null -ne $job)
-		{
-			Assert-True { $job.Status -eq "Completed" }
-		}
+		$result = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Disabled -VaultId $vault.ID -Force
+		Assert-Null $result
 
 		$item = Get-AzRecoveryServicesBackupItem -VaultId $vault.ID -BackupManagementType AzureVM -WorkloadType AzureVM
 		$targetItem = $item | Where-Object { $_.Name -eq $targetItem.Name } | Select-Object -First 1
@@ -200,11 +202,8 @@ function Test-AzureVMSourceScan
 	}
 
 	# Enable Source Scan for the item
-	$job = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Enabled -VaultId $vault.ID -Force
-	if ($null -ne $job)
-	{
-		Assert-True { $job.Status -eq "Completed" }
-	}
+	$result = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Enabled -VaultId $vault.ID -Force
+	Assert-Null $result
 
 	$item = Get-AzRecoveryServicesBackupItem -VaultId $vault.ID -BackupManagementType AzureVM -WorkloadType AzureVM
 	$targetItem = $item | Where-Object { $_.Name -eq $targetItem.Name } | Select-Object -First 1
@@ -215,11 +214,9 @@ function Test-AzureVMSourceScan
 	Assert-NotNull $targetItem.SourceSideScanSummary
 
 	# Disable Source Scan for the item
-	$job = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Disabled -VaultId $vault.ID -Force
-	if ($null -ne $job)
-	{
-		Assert-True { $job.Status -eq "Completed" }
-	}
+	$targetItem = Set-AzRecoveryServicesBackupItemSourceScanConfiguration -Item $targetItem -State Disabled -VaultId $vault.ID -Force -PassThru
+	Assert-NotNull $targetItem
+	Assert-True { $targetItem.SourceSideScanStatus -eq "NotConfigured" }
 
 	$item = Get-AzRecoveryServicesBackupItem -VaultId $vault.ID -BackupManagementType AzureVM -WorkloadType AzureVM
 	$targetItem = $item | Where-Object { $_.Name -eq $targetItem.Name } | Select-Object -First 1
@@ -237,31 +234,38 @@ function Test-AzureVMSourceScan
 
 function Test-AzureVMSourceScanRecoveryPoints
 {
-	$resourceGroupName = "swbela-ransom-rg"
-	$vaultName = "swbela-mdc-vault-1"
-	$targetVmFriendlyName = "Sample-VM"
-	$recoveryPointId = "1128466362346786"
+	$resourceGroupName = "hiagarg"
+	$vaultName = "hiaga-adhoc-vault"
+	$targetVmFriendlyName = "pstest-ccy-vm"
 
 	$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
 
 	# Vault is expected to have Source Scan already enabled in the test environment.
 	Assert-True { $vault.Properties.SourceScanConfiguration.State -eq "Enabled" }
 
-	$namedContainer = Get-AzRecoveryServicesBackupContainer -ContainerType "AzureVM" -FriendlyName $targetVmFriendlyName -VaultId $vault.ID
-	$namedContainer = @($namedContainer) | Select-Object -First 1
-	Assert-NotNull $namedContainer
+	$namedContainers = @(Get-AzRecoveryServicesBackupContainer -ContainerType "AzureVM" -FriendlyName $targetVmFriendlyName -VaultId $vault.ID)
+	Assert-AreEqual $namedContainers.Count 1
+	$namedContainer = $namedContainers[0]
 	Write-Host ("namedContainer Name: {0}; FriendlyName: {1}; ContainerType: {2}" -f $namedContainer.Name, $namedContainer.FriendlyName, $namedContainer.ContainerType)
 
-	$targetItem = Get-AzRecoveryServicesBackupItem -Container $namedContainer -WorkloadType "AzureVM" -VaultId $vault.ID
-	$targetItem = @($targetItem) | Select-Object -First 1
-	Assert-NotNull $targetItem
+	$targetItems = @(Get-AzRecoveryServicesBackupItem -Container $namedContainer -WorkloadType "AzureVM" -VaultId $vault.ID -DeleteState NotDeleted)
+	Assert-AreEqual $targetItems.Count 1
+	$targetItem = $targetItems[0]
 	Write-Host ("targetItem Name: {0}; FriendlyName: {1}; WorkloadType: {2}; SourceSideScanStatus: {3}" -f $targetItem.Name, $targetItem.FriendlyName, $targetItem.WorkloadType, $targetItem.SourceSideScanStatus)
 
 	Assert-True { $targetItem.SourceSideScanStatus -eq "Configured" }
+	Assert-NotNull $targetItem.LastBackupTime
+	$anchor = $targetItem.LastBackupTime.ToUniversalTime()
+	$selectedRecoveryPoint = Get-AzRecoveryServicesBackupRecoveryPoint -Item $targetItem -VaultId $vault.ID `
+		-StartDate $anchor.AddDays(-30) -EndDate $anchor.AddDays(1) |
+		Sort-Object RecoveryPointTime -Descending |
+		Select-Object -First 1
+	Assert-NotNull $selectedRecoveryPoint
+
 	$recoveryPoints = @(Get-AzRecoveryServicesBackupRecoveryPoint `
 		-Item $targetItem `
 		-VaultId $vault.ID `
-		-RecoveryPointId $recoveryPointId)
+		-RecoveryPointId $selectedRecoveryPoint.RecoveryPointId)
 	Assert-True { $recoveryPoints.Count -gt 0 }
 	Assert-NotNull $recoveryPoints[0].PSObject.Properties["ThreatStatus"]
 	Assert-NotNull $recoveryPoints[0].PSObject.Properties["ThreatInfo"]
@@ -487,8 +491,15 @@ function Test-AzureMonitorAlerts
 	finally
 	{
 		# Cleanup
-		Remove-AzRecoveryServicesVault -Vault $vault1
-		Remove-AzRecoveryServicesVault -Vault $vault2
+		if ($null -ne $vault1)
+		{
+			try { Remove-AzRecoveryServicesVault -Vault $vault1 } catch { Write-Warning $_.Exception.Message }
+		}
+
+		if ($null -ne $vault2)
+		{
+			try { Remove-AzRecoveryServicesVault -Vault $vault2 } catch { Write-Warning $_.Exception.Message }
+		}
 	}
 }
 
@@ -1204,20 +1215,53 @@ function Test-AzureUnmanagedVMFullRestore
 
 function Test-AzureVMRPMountScript
 {
-	$location = "southeastasia"
-	$resourceGroupName = Create-ResourceGroup $location
+	# Item-Level Recovery (ILR) mount-script scenario for MSRC-114273.
+	#
+	# This test is recorded live against a pre-provisioned ILR-capable setup rather than an
+	# inline VM-create + first-backup: the cmdlet only returns a non-null CHAP Password when
+	# a real Instant ILR mount succeeds, which requires an already-backed-up VM with an
+	# existing recovery point on a stamp whose Instant ILR backend is functional.
+	#
+	# Pre-provisioned setup used for recording (Record mode) lives in the
+	# "Nirajk-MAB-Functional-Testing" subscription (e1901c89-33a5-4126-868b-991e4a9993dc):
+	#   Resource group : hiaga-ilr-ecy-rg   (region eastus2euap)
+	#   Vault          : ilr-ecy-vault1
+	#   Protected VM   : ilr-win-ecy-vm1    (already protected; has recovery points)
+	# To re-record: select the above subscription in testcredentials.json, confirm the VM
+	# still has at least one recovery point, and run in Record mode. The iSCSI mount scripts
+	# (including the redaction-sensitive CHAP Password) are served by the dedicated
+	# listInstantItemRecoveryOperationResult action rather than the provision
+	# operation-status response (MSRC-114273).
+	$resourceGroupName = "hiaga-ilr-ecy-rg"
+	$vaultName = "ilr-ecy-vault1"
+	$vmFriendlyName = "ilr-win-ecy-vm1"
+
+	$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
+	$item = Get-AzRecoveryServicesBackupItem `
+		-VaultId $vault.ID `
+		-BackupManagementType AzureVM `
+		-WorkloadType AzureVM `
+		-Name $vmFriendlyName
+
+	Assert-NotNull $item.LastBackupTime
+	$anchor = $item.LastBackupTime.ToUniversalTime()
+	$startDate = $anchor.AddDays(-30)
+	$endDate = $anchor.AddDays(1)
+	$rp = Get-AzRecoveryServicesBackupRecoveryPoint `
+		-VaultId $vault.ID `
+		-Item $item `
+		-StartDate $startDate `
+		-EndDate $endDate | Select-Object -First 1
+
+	Assert-NotNull $rp
 
 	try
 	{
-		# Setup
-		$vm = Create-VM $resourceGroupName $location
-		$vault = Create-RecoveryServicesVault $resourceGroupName $location
-		Set-AzRecoveryServicesVaultProperty -VaultId $vault.ID -SoftDeleteFeatureState "Disable"
-		$item = Enable-Protection $vault $vm
-		$backupJob = Backup-Item $vault $item
-		$rp = Get-RecoveryPoint $vault $item $backupJob
-
-		# Get details of mount script of recovery point
+		# After the MSRC-114273 change the iSCSI mount script and its CHAP Password are
+		# retrieved through the dedicated listInstantItemRecoveryOperationResult action
+		# rather than from the provision operation-status response. These assertions confirm
+		# the mount script details (including the redaction-sensitive Password) are still
+		# returned to the user through the new path.
 		$mountScriptDetails = Get-AzRecoveryServicesBackupRPMountScript `
 			-VaultId $vault.ID `
 			-RecoveryPoint $rp
@@ -1227,15 +1271,14 @@ function Test-AzureVMRPMountScript
 		Assert-NotNull $mountScriptDetails.Filename
 		Assert-NotNull $mountScriptDetails.FilePath
 
-		Write-Output $mountScriptDetails
-
-		# Disable the mount script of recovery point
-		Disable-AzRecoveryServicesBackupRPMountScript -VaultId $vault.ID -RecoveryPoint $rp
+		# Emit only non-sensitive fields; the Password (CHAP credential) must not reach test logs.
+		Write-Output ([pscustomobject]@{ OsType = $mountScriptDetails.OsType; Filename = $mountScriptDetails.Filename; FilePath = $mountScriptDetails.FilePath })
 	}
 	finally
 	{
-		# Cleanup
-		Cleanup-ResourceGroup $resourceGroupName
+		# Disable (revoke) the mount session created above. No resource-group cleanup: the
+		# vault and VM are a shared pre-provisioned setup and must not be deleted.
+		Disable-AzRecoveryServicesBackupRPMountScript -VaultId $vault.ID -RecoveryPoint $rp
 	}
 }
 
@@ -1515,7 +1558,6 @@ function Test-AzureRestoreWithCVMOsDiskEncryptionSetId()
 	$targetSubnetName = "default"
 	$owner = "sgholap"
 	$subscriptionId = "5288acd1-ba79-4377-9205-9f220331a44a"
-	$recoveryPointId = "805440465632125"
 	$cVMOSDiskEncryptionSetId = "/subscriptions/5288acd1-ba79-4377-9205-9f220331a44a/resourceGroups/sgholap-rg/providers/Microsoft.Compute/diskEncryptionSets/CVMPSRestoreDES"
 	try
 	{	
@@ -1523,7 +1565,15 @@ function Test-AzureRestoreWithCVMOsDiskEncryptionSetId()
 		$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
 		$namedContainer = Get-AzRecoveryServicesBackupContainer  -ContainerType "AzureVM" -FriendlyName $vmName -VaultId $vault.ID
 		$backupitem = Get-AzRecoveryServicesBackupItem -Container $namedContainer  -WorkloadType "AzureVM" -VaultId $vault.ID
-		$rp = Get-AzRecoveryServicesBackupRecoveryPoint -Item $backupitem -VaultId $vault.ID -RecoveryPointId $recoveryPointId
+		Assert-NotNull $backupitem.LastBackupTime
+		# Anchor the query to the recorded item so the request replays deterministically.
+		$anchor = $backupitem.LastBackupTime.ToUniversalTime()
+		$rp = Get-AzRecoveryServicesBackupRecoveryPoint -Item $backupitem -VaultId $vault.ID `
+			-StartDate $anchor.AddDays(-30) -EndDate $anchor.AddDays(1) |
+			Where-Object { $_.RecoveryPointTier -eq "SnapshotAndVaultStandard" } |
+			Sort-Object RecoveryPointTime -Descending |
+			Select-Object -First 1
+		Assert-NotNull $rp
 
 		# Test command by passing CVMOSDiskEncryptionSetId as non-empty string
 		$restoreJob = Restore-AzRecoveryServicesBackupItem -VaultId $vault.ID -VaultLocation $vault.Location `
